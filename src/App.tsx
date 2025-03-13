@@ -36,14 +36,14 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!url) return;
 
     setResult({ ...result, status: 'loading' });
 
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('YOUR_AZURE_FUNCTION_URL', {
+      // Save hardcoded Url into a env.
+      const response = await fetch('https://podcast-download-function.azurewebsites.net/api/download-podcast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
