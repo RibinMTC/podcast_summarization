@@ -12,6 +12,7 @@ import {
   Input,
 } from '@mui/material';
 import { SummaryResult } from './types';
+import config from './config';
 
 function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
   return (
@@ -35,9 +36,53 @@ function App() {
     status: 'idle'
   });
 
+  const validateFile = (file: File): string | null => {
+    // Check file size
+    if (file.size > config.fileValidation.maxSizeBytes) {
+      return `File is too large. Maximum size is ${config.fileValidation.maxSizeBytes / (1024 * 1024)}MB`;
+    }
+
+    // Check file extension
+    const fileExtension = `.${file.name.split('.').pop()?.toLowerCase()}`;
+    if (!config.fileValidation.supportedExtensions.includes(fileExtension)) {
+      return `Unsupported file type. Supported formats: ${config.fileValidation.supportedExtensions.join(', ')}`;
+    }
+
+    // Check MIME type
+    if (!config.fileValidation.supportedFormats.includes(file.type)) {
+      return `Invalid file format. Supported formats: ${config.fileValidation.supportedFormats.map(format => format.split('/')[1]).join(', ')}`;
+    }
+
+    return null;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      const error = validateFile(selectedFile);
+      
+      if (error) {
+        setResult({
+          ...result,
+          status: 'error',
+          error,
+        });
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
+      setFile(selectedFile);
+      // Clear any previous errors
+      if (result.status === 'error') {
+        setResult({
+          summary: '',
+          actionItems: [],
+          status: 'idle'
+        });
+      }
     }
   };
 
@@ -52,7 +97,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:54239/api/process-audio', {
+      const response = await fetch(`${config.api.baseUrl}${config.api.endpoints.processAudio}`, {
         method: 'POST',
         body: formData,
       });
@@ -89,13 +134,22 @@ function App() {
               onChange={handleFileChange}
               fullWidth
               inputProps={{
-                accept: 'audio/*',
+                accept: config.fileValidation.supportedFormats.join(','),
               }}
               sx={{ mb: 2 }}
             />
-            <Typography variant="caption" display="block" gutterBottom>
-              Supported formats: MP3, WAV, M4A, etc.
-            </Typography>
+            <Box sx={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.03)', 
+              p: 1, 
+              borderRadius: 1,
+              mb: 2
+            }}>
+              <Typography variant="caption" display="block" color="text.secondary">
+                <strong>Supported formats:</strong> {config.fileValidation.supportedExtensions.join(', ')}
+                <br />
+                <strong>Maximum file size:</strong> {config.fileValidation.maxSizeBytes / (1024 * 1024)}MB
+              </Typography>
+            </Box>
             <Button
               fullWidth
               variant="contained"
