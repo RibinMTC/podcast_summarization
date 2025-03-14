@@ -1,46 +1,139 @@
-# Getting Started with Create React App
+# Podcast Summarizer
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A simple web application that analyzes audio files (like podcasts) and generates summaries and action items. This project is designed for educational and testing purposes.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Audio file upload support (MP3, WAV, M4A, OGG)
+- Automatic summary generation
+- Action items extraction
+- Simple and clean user interface
+- Configurable backend API
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Frontend
+- React (Create React App)
+- TypeScript
+- Material-UI (MUI) for components
+- Environment-based configuration
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Backend
+- Python
+- FastAPI
+- CORS support
+- File upload handling
 
-### `npm test`
+## Project Structure
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+podcast-summarizer/
+├── src/                    # Frontend source code
+│   ├── config/            # Configuration files
+│   │   └── index.ts      # Main config with types
+│   ├── App.tsx           # Main React component
+│   ├── types.ts          # TypeScript type definitions
+│   └── index.tsx         # React entry point
+├── server.py              # Python backend server
+├── .env                   # Environment variables
+├── .env.development       # Development-specific variables
+└── public/               # Static assets
+```
 
-### `npm run build`
+## Configuration
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The application uses environment variables and a TypeScript configuration file for managing settings:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Environment Variables (.env)
+```env
+REACT_APP_API_URL=http://localhost:54239
+REACT_APP_API_ENDPOINT=/api/process-audio
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### TypeScript Config (src/config/index.ts)
+- API base URL and endpoints
+- Supported audio formats
+- Other application settings
 
-### `npm run eject`
+## Setup and Running
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+1. Install dependencies:
+   ```bash
+   # Frontend dependencies
+   npm install
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   # Backend dependencies
+   pip install fastapi uvicorn python-multipart
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+2. Start the backend server:
+   ```bash
+   python server.py
+   ```
+   The server will run on http://localhost:54239
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+3. Start the frontend development server:
+   ```bash
+   npm start
+   ```
+   The application will open in your browser at http://localhost:59022
 
-## Learn More
+## Usage
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Open the application in your browser
+2. Click the file input or drag and drop an audio file
+3. Supported formats: MP3, WAV, M4A, OGG
+4. Click "Analyze Audio" to process the file
+5. View the generated summary and action items in the tabs below
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Development
+
+### Adding New Features
+
+1. Backend:
+   - Add new endpoints in `server.py`
+   - Update the API configuration in `.env` files
+   - Add new processing logic for audio files
+
+2. Frontend:
+   - Update configuration in `src/config/index.ts`
+   - Add new components in `src/`
+   - Update types in `src/types.ts`
+
+### Configuration Best Practices
+
+1. Environment Variables:
+   - Use `.env` for default values
+   - Use `.env.development` for development-specific settings
+   - Use `.env.production` for production settings (not included)
+   - Always prefix React environment variables with `REACT_APP_`
+
+2. TypeScript Configuration:
+   - Keep all configuration types in `config/index.ts`
+   - Use interfaces for type safety
+   - Provide default values for all settings
+
+## Notes
+
+- This is a demonstration project for educational purposes
+- The backend currently returns mock data
+- In a production environment, you would need to:
+  - Implement proper audio processing
+  - Add error handling
+  - Add security measures
+  - Add file size limits
+  - Add proper file cleanup
+  - Add user authentication
+  - Add proper logging
+  - Add proper testing
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - feel free to use this code for learning and testing purposes.

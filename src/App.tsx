@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Container,
-  TextField,
   Button,
   Box,
   Tab,
@@ -10,6 +9,7 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Input,
 } from '@mui/material';
 import { SummaryResult } from './types';
 
@@ -26,32 +26,38 @@ function TabPanel({ children, value, index }: { children: React.ReactNode; value
 }
 
 function App() {
-  const [url, setUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<SummaryResult>({
     summary: '',
     actionItems: [],
     status: 'idle'
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!url) return;
+    if (!file) return;
 
     setResult({ ...result, status: 'loading' });
 
     try {
-      // Save hardcoded Url into a env.
-      const response = await fetch('https://podcast-download-function.azurewebsites.net/api/download-podcast', {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:54239/api/process-audio', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url }),
+        body: formData,
       });
 
-      if (!response.ok) throw new Error('Failed to process video');
+      if (!response.ok) throw new Error('Failed to process audio');
 
       const data = await response.json();
       setResult({
@@ -77,26 +83,30 @@ function App() {
 
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <form onSubmit={handleSubmit}>
-            <TextField
+            <Input
+              type="file"
+              inputRef={fileInputRef}
+              onChange={handleFileChange}
               fullWidth
-              label="YouTube URL"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              margin="normal"
-              variant="outlined"
-              placeholder="Paste YouTube URL here"
+              inputProps={{
+                accept: 'audio/*',
+              }}
+              sx={{ mb: 2 }}
             />
+            <Typography variant="caption" display="block" gutterBottom>
+              Supported formats: MP3, WAV, M4A, etc.
+            </Typography>
             <Button
               fullWidth
               variant="contained"
               type="submit"
-              disabled={!url || result.status === 'loading'}
+              disabled={!file || result.status === 'loading'}
               sx={{ mt: 2 }}
             >
               {result.status === 'loading' ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                'Summarize'
+                'Analyze Audio'
               )}
             </Button>
           </form>
