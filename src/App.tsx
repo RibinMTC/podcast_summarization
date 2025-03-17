@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Container,
   Button,
@@ -35,6 +35,59 @@ function App() {
     actionItems: [],
     status: 'idle'
   });
+  const [podcastId, setPodcastId] = useState<string | null>(null);
+
+  // Polling for summary completion
+  useEffect(() => {
+    // Only poll if we're in processing state and have a podcastId
+    if (result.status === 'processing' && podcastId) {
+      const intervalId = setInterval(async () => {
+        try {
+          await checkSummaryStatus(podcastId);
+        } catch (error) {
+          console.error('Error checking status:', error);
+        }
+      }, config.polling.intervalMs);
+
+      // Clean up interval on unmount or when status changes
+      return () => clearInterval(intervalId);
+    }
+  }, [result.status, podcastId]);
+
+  const checkSummaryStatus = async (id: string) => {
+    try {
+      const response = await fetch(`${config.api.baseUrl}${config.api.endpoints.getSummary}/${id}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          // 404 means it's still processing
+          return;
+        }
+        throw new Error('Failed to check summary status');
+      }
+
+      const data = await response.json();
+
+      // If the response includes isReady flag, check it
+      if ('isReady' in data) {
+        if (!data.isReady) {
+          // Still processing
+          return;
+        }
+      }
+
+      // If we have a summary, processing is complete
+      if (data.summary) {
+        setResult({
+          summary: data.summary,
+          actionItems: Array.isArray(data.actionItems) ? data.actionItems : [],
+          status: 'completed'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+    }
+  };
 
   const validateFile = (file: File): string | null => {
     // Check file size
@@ -60,7 +113,7 @@ function App() {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       const error = validateFile(selectedFile);
-      
+
       if (error) {
         setResult({
           ...result,
@@ -105,11 +158,23 @@ function App() {
       if (!response.ok) throw new Error('Failed to process audio');
 
       const data = await response.json();
-      setResult({
-        summary: data.summary,
-        actionItems: data.actionItems,
-        status: 'completed'
-      });
+
+      // Check if this is an async process (returns podcastId)
+      if (data.podcastId) {
+        setPodcastId(data.podcastId);
+        setResult({
+          summary: '',
+          actionItems: [],
+          status: 'processing'
+        });
+      } else {
+        // If it's a synchronous response with results
+        setResult({
+          summary: data.summary,
+          actionItems: Array.isArray(data.actionItems) ? data.actionItems : [],
+          status: 'completed'
+        });
+      }
     } catch (error) {
       setResult({
         ...result,
@@ -117,6 +182,16 @@ function App() {
         error: error instanceof Error ? error.message : 'An error occurred'
       });
     }
+  };
+
+  // Calculate progress indicator
+  const getProgressMessage = () => {
+    if (result.status === 'loading') {
+      return 'Uploading audio file...';
+    } else if (result.status === 'processing') {
+      return 'Processing your podcast. This may take a few minutes...';
+    }
+    return '';
   };
 
   return (
@@ -138,9 +213,9 @@ function App() {
               }}
               sx={{ mb: 2 }}
             />
-            <Box sx={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.03)', 
-              p: 1, 
+            <Box sx={{
+              backgroundColor: 'rgba(0, 0, 0, 0.03)',
+              p: 1,
               borderRadius: 1,
               mb: 2
             }}>
@@ -154,10 +229,10 @@ function App() {
               fullWidth
               variant="contained"
               type="submit"
-              disabled={!file || result.status === 'loading'}
+              disabled={!file || result.status === 'loading' || result.status === 'processing'}
               sx={{ mt: 2 }}
             >
-              {result.status === 'loading' ? (
+              {(result.status === 'loading' || result.status === 'processing') ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
                 'Analyze Audio'
@@ -172,7 +247,13 @@ function App() {
           </Alert>
         )}
 
-        {(result.status === 'completed' || result.status === 'loading') && (
+        {(result.status === 'loading' || result.status === 'processing') && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {getProgressMessage()}
+          </Alert>
+        )}
+
+        {result.status === 'completed' && (
           <Paper elevation={3}>
             <Tabs
               value={tabValue}
@@ -184,27 +265,15 @@ function App() {
             </Tabs>
 
             <TabPanel value={tabValue} index={0}>
-              {result.status === 'loading' ? (
-                <Box display="flex" justifyContent="center" p={3}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                result.summary
-              )}
+              {result.summary}
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>
-              {result.status === 'loading' ? (
-                <Box display="flex" justifyContent="center" p={3}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <ul>
-                  {result.actionItems.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              )}
+              <ul>
+                {result.actionItems.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
             </TabPanel>
           </Paper>
         )}
