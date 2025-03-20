@@ -11,14 +11,17 @@ interface Config {
     supportedFormats: string[];
     supportedExtensions: string[];
   };
+  polling: {
+    intervalMs: number;
+  };
 }
 
 const config: Config = {
   api: {
-    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:54239',
+    baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:7071',
     endpoints: {
-      processAudio: process.env.REACT_APP_API_ENDPOINT || '/api/process-audio',
-      getSummary: '/api/summaries'
+      processAudio: process.env.REACT_APP_API_ENDPOINT || '/api/podcast-summarizer/process-audio',
+      getSummary: '/api/podcast-summarizer/summary'
     },
   },
   fileValidation: {
@@ -32,6 +35,9 @@ const config: Config = {
     ],
     supportedExtensions: ['.mp3', '.wav', '.m4a', '.ogg'],
   },
+  polling: {
+    intervalMs: 5000 // Check every 5 seconds
+  }
 };
 
 export default config;

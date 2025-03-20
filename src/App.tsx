@@ -19,7 +19,7 @@ function TabPanel({ children, value, index }: { children: React.ReactNode; value
     <div role="tabpanel" hidden={value !== index}>
       {value === index && (
         <Box sx={{ p: 3 }}>
-          <Typography>{children}</Typography>
+          {children}
         </Box>
       )}
     </div>
@@ -35,15 +35,15 @@ function App() {
     actionItems: [],
     status: 'idle'
   });
-  const [podcastId, setPodcastId] = useState<string | null>(null);
+  const [statusQueryUri, setStatusQueryUri] = useState<string | null>(null);
 
   // Polling for summary completion
   useEffect(() => {
-    // Only poll if we're in processing state and have a podcastId
-    if (result.status === 'processing' && podcastId) {
+    // Only poll if we're in processing state and have a statusQueryUri
+    if (result.status === 'processing' && statusQueryUri) {
       const intervalId = setInterval(async () => {
         try {
-          await checkSummaryStatus(podcastId);
+          await checkSummaryStatus(statusQueryUri);
         } catch (error) {
           console.error('Error checking status:', error);
         }
@@ -52,38 +52,30 @@ function App() {
       // Clean up interval on unmount or when status changes
       return () => clearInterval(intervalId);
     }
-  }, [result.status, podcastId]);
+  }, [result.status, statusQueryUri]);
 
-  const checkSummaryStatus = async (id: string) => {
+  const checkSummaryStatus = async (statusUrl: string) => {
     try {
-      const response = await fetch(`${config.api.baseUrl}${config.api.endpoints.getSummary}/${id}`);
+      const response = await fetch(statusUrl);
 
       if (!response.ok) {
-        if (response.status === 404) {
-          // 404 means it's still processing
-          return;
-        }
         throw new Error('Failed to check summary status');
       }
 
       const data = await response.json();
 
-      // If the response includes isReady flag, check it
-      if ('isReady' in data) {
-        if (!data.isReady) {
-          // Still processing
-          return;
-        }
-      }
-
-      // If we have a summary, processing is complete
-      if (data.summary) {
+      // Check the runtimeStatus to determine if processing is complete
+      if (data.runtimeStatus === 'Completed' && data.output) {
+        // Parse the output which is a JSON string
+        const outputData = JSON.parse(data.output);
+        
         setResult({
-          summary: data.summary,
-          actionItems: Array.isArray(data.actionItems) ? data.actionItems : [],
+          summary: outputData.summary || '',
+          actionItems: Array.isArray(outputData.action_items) ? outputData.action_items : [],
           status: 'completed'
         });
       }
+      // If still running, continue polling
     } catch (error) {
       console.error('Error checking status:', error);
     }
@@ -159,9 +151,9 @@ function App() {
 
       const data = await response.json();
 
-      // Check if this is an async process (returns podcastId)
-      if (data.podcastId) {
-        setPodcastId(data.podcastId);
+      // Check if this is an async process (returns statusQueryGetUri)
+      if (data.statusQueryGetUri) {
+        setStatusQueryUri(data.statusQueryGetUri);
         setResult({
           summary: '',
           actionItems: [],
